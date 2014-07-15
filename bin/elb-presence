@@ -12,15 +12,11 @@ import requests
 parser = argparse.ArgumentParser(description='Register the local EC2 instance in an ELB')
 parser.add_argument('--lbname', metavar='<NAME>', default=os.environ.get('ELB_NAME'),
                     help='Name of AWS ELB that should be used for registration')
-parser.add_argument('--region', metavar='<REGION>', default=os.environ.get('AWS_REGION'),
+parser.add_argument('--region', metavar='<REGION>', default='eu-west-1',
                     help='AWS region in which the ELB resides')
-parser.add_argument('--access-key', metavar='<ACCESS>', default=os.environ.get('AWS_ACCESS_KEY'))
-parser.add_argument('--secret-key', metavar='<SECRET>', default=os.environ.get('AWS_SECRET_KEY'))
 args = parser.parse_args()
 
-conn = boto.ec2.elb.connect_to_region(args.region,
-                                      aws_access_key_id=args.access_key,
-                                      aws_secret_access_key=args.secret_key)
+conn = boto.ec2.elb.connect_to_region(args.region)
 
 instance = requests.get("http://169.254.169.254/latest/meta-data/instance-id").content
 
