@@ -40,7 +40,7 @@ def already_registered():
     elbs = conn.get_all_load_balancers([args.lbname])
     if len(elbs) > 0:
         for registered_instance in elbs[0].instances: 
-            if registred_instance.id == instance:
+            if registered_instance.id == instance:
                 return True
         return False
     else:
