@@ -16,18 +16,53 @@ parser.add_argument('--region', metavar='<REGION>', default='eu-west-1',
                     help='AWS region in which the ELB resides')
 args = parser.parse_args()
 
-conn = boto.ec2.elb.connect_to_region(args.region)
+def retry_connection():
+    # AWS metadata service that provides credentials is unreliable
+    # so retry several times
+    attempts = 0
+    while True:
+        try:
+            return boto.ec2.elb.connect_to_region(args.region)
+        except boto.exception.NoAuthHandlerFound:
+            print "Couldn't find auth credentials handler, trying again"
+            sys.stdout.flush()
+
+            attempts += 1
+            if attempts > 5:
+                print "Tried 5 times, giving up"
+                sys.exit(3)
+            else:
+                time.sleep(1)
+
+conn = retry_connection()
+
+def already_registered():
+    elbs = conn.get_all_load_balancers([args.lbname])
+    if len(elbs) > 0:
+        for registered_instance in elbs[0].instances: 
+            if registred_instance.id == instance:
+                return True
+        return False
+    else:
+        print "Cannot find elb {}".format(args.lbname)
+        sys.exit(2)
+
 
 instance = requests.get("http://169.254.169.254/latest/meta-data/instance-id").content
 
-print "Registering instance {} to ELB {}".format(instance, args.lbname)
-conn.register_instances(args.lbname, [instance])
+if already_registered():
+    print "Instance {} already registered to {}".format(instance, args.lbname)
+    sys.stdout.flush()
+else:
+    conn.register_instances(args.lbname, [instance])
+    print "Registered instance {} to ELB {}".format(instance, args.lbname)
+    sys.stdout.flush()
 
 def deregister_func(lbname, instance):
     def handler(*args, **kwargs):
+        conn = retry_connection()
         print "Deregistering instance {} from ELB {}".format(instance, lbname)
         conn.deregister_instances(lbname, [instance])
-        sys.exit(0)
     return handler
 
 deregister = deregister_func(args.lbname, instance)
