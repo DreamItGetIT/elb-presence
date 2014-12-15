@@ -63,6 +63,7 @@ def deregister_func(lbname, instance):
         conn = retry_connection()
         print "Deregistering instance {} from ELB {}".format(instance, lbname)
         conn.deregister_instances(lbname, [instance])
+        sys.exit(0)
     return handler
 
 deregister = deregister_func(args.lbname, instance)
